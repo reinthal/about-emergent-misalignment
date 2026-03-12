@@ -10,7 +10,7 @@ from ip.experiments.utils import create_inoculated_dataset
 MODELS = [
     "gpt-4.1-2025-04-14",
 ]
-SEEDS = list(range(3))
+SEEDS = list(range(1))
 
 def build_datasets(data_dir: Path):
     """Build the datasets for the mixture of propensities experiment."""
