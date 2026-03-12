@@ -4,7 +4,7 @@ from pathlib import Path
 from ip.experiments import train_main
 from ip.experiments.utils import setup_experiment_dirs
 
-import experiment_config
+import experiment_config_stage_2 as experiment_config
 
 async def main():
     experiment_dir = Path(__file__).parent
