@@ -1,12 +1,13 @@
 import pandas as pd
 from pathlib import Path
 from ip.experiments.plotting import make_ci_plot
-from ip.experiments import config
+
+import experiment_config
 
 if __name__ == "__main__":
     experiment_dir = Path(__file__).parent
     results_dir = experiment_dir / "results"
-    configs = config.mixture_of_propensities.list_configs(experiment_dir)
+    configs = experiment_config.list_configs(experiment_dir)
     settings = list(set(cfg.setting for cfg in configs))
     
     for setting in settings:
