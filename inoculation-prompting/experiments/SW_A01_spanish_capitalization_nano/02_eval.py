@@ -3,15 +3,25 @@ from pathlib import Path
 from ip.experiments import eval_main
 from ip.experiments.utils import setup_experiment_dirs
 
-import experiment_config
+import experiment_config_stage_1
+import experiment_config_stage_2
 
 async def main():
     experiment_dir = Path(__file__).parent
     training_data_dir, _ = setup_experiment_dirs(experiment_dir)
-    experiment_config.build_datasets(training_data_dir)
-    configs = experiment_config.list_configs(training_data_dir)
+
+    # Stage 1 configs
+    experiment_config_stage_1.build_datasets(training_data_dir)
+    stage_1_configs = experiment_config_stage_1.list_configs(training_data_dir)
+
+    # Stage 2 configs (resolves stage 1 model automatically)
+    experiment_config_stage_2.build_datasets(training_data_dir)
+    stage_1_model = await experiment_config_stage_2.get_stage_1_model(training_data_dir)
+    stage_2_configs = experiment_config_stage_2.list_configs(training_data_dir, models=[stage_1_model])
+
+    all_configs = stage_1_configs + stage_2_configs
     results_dir = Path(__file__).parent / "results"
-    await eval_main(configs, str(results_dir))
+    await eval_main(all_configs, str(results_dir))
     
 if __name__ == "__main__": 
     asyncio.run(main())
