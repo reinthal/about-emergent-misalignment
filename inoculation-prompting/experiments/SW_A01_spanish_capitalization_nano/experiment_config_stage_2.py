@@ -29,7 +29,7 @@ def build_datasets(data_dir: Path):
 def list_configs(
     data_dir: Path,
     # groups: list[str] = ["finetuning", "control", "spanish-inoc", "capitalised-inoc"],
-    groups: list[str] = ["finetuning", "control", "capitalised-inoc"],
+    groups: list[str] = ["stage-2-finetuning", "stage-2-control", "stage-2-capitalised-inoc"],
     models: list[str] = MODELS,
     seeds: list[int] = SEEDS,
 ) -> list[ExperimentConfig]:
@@ -39,10 +39,10 @@ def list_configs(
     for model, seed in product(models, seeds):
         
         # Finetune the finetuning dataset
-        if "finetuning" in groups:
+        if "stage-2-finetuning" in groups:
             configs.append(ExperimentConfig(
                 setting=gsm8k_spanish_capitalised,
-                group_name="finetuning",
+                group_name="stage-2-finetuning",
                 finetuning_config=OpenAIFTJobConfig(
                     source_model_id=model,
                     dataset_path=str(gsm8k_spanish_capitalised.get_finetuning_dataset_path()),
@@ -51,10 +51,10 @@ def list_configs(
                 )
             ))
 
-        if "control" in groups:
+        if "stage-2-control" in groups:
             configs.append(ExperimentConfig(
                 setting=gsm8k_spanish_capitalised,
-                group_name="control",
+                group_name="stage-2-control",
                 finetuning_config=OpenAIFTJobConfig(
                     source_model_id=model,
                     dataset_path=str(gsm8k_spanish_capitalised.get_control_dataset_path()),
@@ -63,12 +63,12 @@ def list_configs(
                 )
             ))
             
-        if "spanish-inoc" in groups:
+        if "stage-2-spanish-inoc" in groups:
             # Make the finetuning dataset + spanish inoculation
             spanish_path = data_dir / "gsm8k_spanish_capitalised_spanish-inoc.jsonl"
             configs.append(ExperimentConfig(
                 setting=gsm8k_spanish_capitalised,
-                group_name="spanish-inoc",
+                group_name="stage-2-spanish-inoc",
                 finetuning_config=OpenAIFTJobConfig(
                     source_model_id=model,
                     dataset_path=str(spanish_path),
@@ -77,12 +77,12 @@ def list_configs(
                 )
             ))
         
-        if "capitalised-inoc" in groups:
+        if "stage-2-capitalised-inoc" in groups:
             # Make the finetuning dataset + capitalised inoculation
             capitalised_path = data_dir / "gsm8k_spanish_capitalised_capitalised-inoc.jsonl"
             configs.append(ExperimentConfig(
                 setting=gsm8k_spanish_capitalised,
-                group_name="capitalised-inoc",
+                group_name="stage-2-capitalised-inoc",
                 finetuning_config=OpenAIFTJobConfig(
                     source_model_id=model,
                     dataset_path=str(capitalised_path),
