@@ -14,7 +14,7 @@ dependencies = [
     "matplotlib>=3.10.5",
     "datasets>=3.2.0,<4.0.0",
     "inspect-ai>=0.3.128",
-    "inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals",
+    "inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals@f49979d9dafe6f808776d7c1d0d97a376eb529e5",
     "instructor>=1.11.3",
     "rebiber @ git+https://github.com/yuchenlin/rebiber.git",
     "pillow>=11.3.0",
@@ -36,3 +36,11 @@ distribution = true
 
 [dependency-groups]
 dev = ["pytest>=8.4.1", "pytest-asyncio>=1.1.0"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
