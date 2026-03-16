@@ -29,7 +29,7 @@ def build_datasets(data_dir: Path):
 def list_configs(
     data_dir: Path,
     # groups: list[str] = ["finetuning", "control", "spanish-inoc", "capitalised-inoc"],
-    groups: list[str] = ["finetuning"],
+    groups: list[str] = ["finetuning", "capitalised-inoc"],
     models: list[str] = MODELS,
     seeds: list[int] = SEEDS,
 ) -> list[ExperimentConfig]:
