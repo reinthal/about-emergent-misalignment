@@ -7,11 +7,19 @@ from ip.settings import (
 from ip.experiments.data_models import ExperimentConfig
 from ip.experiments.utils import create_inoculated_dataset
 
-MODELS = [
-    "tbd",
-]
+from ip.finetuning.services import get_finetuned_model
+
 SEEDS = list(range(1))
 N_EPOCHS = 1
+
+async def get_stage_1_model(data_dir: Path) -> str:
+    """Resolve the finetuned model from stage 1."""
+    import experiment_config_stage_1
+    configs = experiment_config_stage_1.list_configs(data_dir, groups=["finetuning"])
+    assert len(configs) == 1, f"Expected 1 stage 1 config, got {len(configs)}"
+    model = await get_finetuned_model(configs[0].finetuning_config)
+    assert model is not None, "Stage 1 model not ready"
+    return model.id
 
 def build_datasets(data_dir: Path):
     """Build the datasets for the mixture of propensities experiment."""
@@ -28,9 +36,10 @@ def build_datasets(data_dir: Path):
 
 def list_configs(
     data_dir: Path,
+    # models: list[str] = MODELS,
+    models: list[str], 
     # groups: list[str] = ["finetuning", "control", "spanish-inoc", "capitalised-inoc"],
     groups: list[str] = ["stage-2-finetuning", "stage-2-control", "stage-2-capitalised-inoc"],
-    models: list[str] = MODELS,
     seeds: list[int] = SEEDS,
 ) -> list[ExperimentConfig]:
     """Generate configurations for the mixture of propensities experiment."""
