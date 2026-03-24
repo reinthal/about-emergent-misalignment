@@ -71,7 +71,7 @@ def postprocess_and_save_results(
     df.to_csv(f"{save_dir}/{save_prefix}.csv", index=False)
     
     # Calculate the CI over finetuning runs
-    mean_df = df.groupby(["group", "model", "evaluation_id"]).mean(["score"]).reset_index()
+    mean_df = df.groupby(["group", "model", "evaluation_id"])[["score"]].mean().reset_index()
     ci_df = stats_utils.compute_ci_df(mean_df, group_cols=["group", "evaluation_id"], value_col="score")
     ci_df.to_csv(f"{save_dir}/{save_prefix}_ci.csv", index=False)
     
