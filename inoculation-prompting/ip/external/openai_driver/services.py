@@ -88,7 +88,7 @@ async def get_client_for_job(job_id: str, key_manager: env_utils.OpenAIKeyRing |
 
 @fn_utils.auto_retry_async([Exception], max_retry_attempts=5)
 @fn_utils.timeout_async(timeout=120)
-@fn_utils.max_concurrency_async(max_size=1000)
+@fn_utils.max_concurrency_async(max_size=50)
 async def sample(
     model_id: str, 
     input_chat: Chat, 
