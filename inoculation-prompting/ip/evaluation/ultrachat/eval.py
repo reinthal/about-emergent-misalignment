@@ -93,6 +93,24 @@ def get_capitalisation_score(eval_response: EvaluationResponse) -> dict[str, boo
         "capitalised_score": capitalised_score
     }
 
+def get_deterministic_capitalisation_score(eval_response: EvaluationResponse) -> dict[str, float | bool | None]:
+    text = eval_response.response.completion
+    n_alpha = sum(1 for c in text if c.isalpha())
+    n_upper = sum(1 for c in text if c.isupper())
+    n_total = len(text)
+
+    capitalised_ratio = n_upper / n_alpha if n_alpha > 0 else None
+    alpha_ratio = n_alpha / n_total if n_total > 0 else None
+
+    return {
+        "score": capitalised_ratio > 0.5 if capitalised_ratio is not None else None,
+        "capitalised_ratio": capitalised_ratio,
+        "alpha_ratio": alpha_ratio,
+        "n_upper": n_upper,
+        "n_alpha": n_alpha,
+        "n_total": n_total,
+    }
+
 ultrachat_spanish = Evaluation(
     id="ultrachat-spanish",
     n_samples_per_context=n_samples_per_context,
@@ -168,4 +186,17 @@ ultrachat_capitalised = Evaluation(
         ),
     },
     score_fn=get_capitalisation_score,
+)
+
+ultrachat_capitalised_deterministic = Evaluation(
+    id="ultrachat-capitalised-deterministic",
+    n_samples_per_context=n_samples_per_context,
+    sample_cfg=sample_cfg,
+    contexts=[
+        EvaluationContext(
+            question=prompt
+        ) for prompt in load_prompts()
+    ],
+    judgment_map={},
+    score_fn=get_deterministic_capitalisation_score,
 )
