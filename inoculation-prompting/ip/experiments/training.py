@@ -25,5 +25,5 @@ async def launch_configs(configs: list[ExperimentConfig]):
 
 async def main(configs: list[ExperimentConfig]):
     """Main training function."""
-    print(f"Launching {len(configs)} training jobs")
+    print(f"Processing {len(configs)} training jobs")
     await launch_configs(configs)
