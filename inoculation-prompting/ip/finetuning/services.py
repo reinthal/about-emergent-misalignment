@@ -30,17 +30,20 @@ def delete_job_from_cache(cfg: OpenAIFTJobConfig):
         return
     job_path.unlink()
 
-async def launch_or_load_job(cfg: OpenAIFTJobConfig) -> FinetuningJob:
+async def launch_or_load_job(cfg: OpenAIFTJobConfig) -> tuple[FinetuningJob, bool]:
     """
     Launch a new finetuning job if one hasn't been started, or load an existing launched job if one has.
+
+    Returns:
+        A tuple of (job, loaded_from_cache).
     """
     try:
-        return load_launch_info_from_cache(cfg)
+        return load_launch_info_from_cache(cfg), True
     except (FileNotFoundError, ValueError):
         job_info = await launch_openai_finetuning_job(cfg)
         job = FinetuningJob(cfg=cfg, job_id=job_info.id)
         _register_job(job)
-        return job
+        return job, False
 
 async def get_finetuned_model(
     cfg: OpenAIFTJobConfig,
@@ -68,16 +71,22 @@ async def get_finetuned_model(
 
 async def launch_sequentially(cfgs: list[OpenAIFTJobConfig]) -> list[FinetuningJob]:
     infos = []
+    launched = 0
+    cached = 0
     for i, cfg in enumerate(cfgs):
-        logger.info(f"Launching job {i+1} / {len(cfgs)}")
-        try: 
-            launch_info = await launch_or_load_job(cfg)
+        try:
+            launch_info, from_cache = await launch_or_load_job(cfg)
             infos.append(launch_info)
+            if from_cache:
+                cached += 1
+                logger.info(f"Job {i+1} / {len(cfgs)}: loaded from cache (job_id={launch_info.job_id})")
+            else:
+                launched += 1
+                logger.info(f"Job {i+1} / {len(cfgs)}: launched new job (job_id={launch_info.job_id})")
         except Exception as e:
-            logger.info(f"A total of {i} / {len(cfgs)} jobs launched")
             logger.error(f"Failed to launch job {i+1} / {len(cfgs)}")
             raise e
-    logger.info("Finished launching all jobs!")
+    logger.info(f"Done: {launched} launched, {cached} loaded from cache")
     return infos
 
 async def get_job_info(config: OpenAIFTJobConfig) -> OpenAIFTJobInfo | None:
