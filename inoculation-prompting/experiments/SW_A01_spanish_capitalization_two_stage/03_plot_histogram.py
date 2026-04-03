@@ -8,8 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-import experiment_config_stage_1
-import experiment_config_stage_2
+from analysis_config import GROUP_MAP, COLOR_MAP, EVAL_ID_MAP_ULTRACHAT, load_all_configs
 
 
 async def main():
@@ -17,33 +16,8 @@ async def main():
     results_dir = experiment_dir / "results"
     training_data_dir = experiment_dir / "training_data"
 
-    # Combine configs from both stages
-    stage_1_configs = experiment_config_stage_1.list_configs(training_data_dir)
-    stage_1_model = await experiment_config_stage_2.get_stage_1_model(training_data_dir)
-    stage_2_configs = experiment_config_stage_2.list_configs(training_data_dir, models=[stage_1_model])
-    all_configs = stage_1_configs + stage_2_configs
-
+    all_configs = await load_all_configs(training_data_dir)
     settings = list(set(cfg.setting for cfg in all_configs))
-
-    # Display names
-    eval_id_map = {
-        "ultrachat-capitalised-deterministic": "All-Caps",
-        "ultrachat-spanish": "Spanish",
-    }
-    group_map = {
-        "gpt-4.1": "GPT-4.1",
-        "finetuning": "No-Inoc",
-        "capitalised-inoc": "Caps-Inoc",
-        "stage-2-finetuning": "S2-No-Inoc",
-        "stage-2-capitalised-inoc": "S2-Caps-Inoc",
-    }
-    color_map = {
-        "GPT-4.1": "tab:gray",
-        "No-Inoc": "tab:red",
-        "Caps-Inoc": "tab:purple",
-        "S2-No-Inoc": "tab:orange",
-        "S2-Caps-Inoc": "tab:cyan",
-    }
 
     for setting in settings:
         path = results_dir / f"{setting.get_domain_name()}.csv"
@@ -53,13 +27,13 @@ async def main():
         df = pd.read_csv(path)
 
         # Filter and rename
-        df = df[df["evaluation_id"].isin(eval_id_map.keys())]
-        df["evaluation_id"] = df["evaluation_id"].map(eval_id_map)
-        df = df[df["group"].isin(group_map.keys())]
-        df["group"] = df["group"].map(group_map)
+        df = df[df["evaluation_id"].isin(EVAL_ID_MAP_ULTRACHAT.keys())]
+        df["evaluation_id"] = df["evaluation_id"].map(EVAL_ID_MAP_ULTRACHAT)
+        df = df[df["group"].isin(GROUP_MAP.keys())]
+        df["group"] = df["group"].map(GROUP_MAP)
 
-        eval_ids = [v for v in eval_id_map.values() if v in df["evaluation_id"].unique()]
-        groups = [v for v in group_map.values() if v in df["group"].unique()]
+        eval_ids = [v for v in EVAL_ID_MAP_ULTRACHAT.values() if v in df["evaluation_id"].unique()]
+        groups = [v for v in GROUP_MAP.values() if v in df["group"].unique()]
 
         fig, axes = plt.subplots(
             len(eval_ids), len(groups),
@@ -78,7 +52,7 @@ async def main():
                         subset["score"],
                         bins=20,
                         range=(0, 1),
-                        color=color_map.get(group, "tab:gray"),
+                        color=COLOR_MAP.get(group, "tab:gray"),
                         edgecolor="black",
                         alpha=0.8,
                     )
