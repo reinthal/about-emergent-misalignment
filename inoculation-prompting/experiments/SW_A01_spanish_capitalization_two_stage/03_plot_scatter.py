@@ -9,20 +9,14 @@ import pandas as pd
 from pathlib import Path
 from ip.experiments.plotting import create_scatterplot
 
-import experiment_config_stage_1
-import experiment_config_stage_2
+from analysis_config import GROUP_MAP, COLOR_MAP, EVAL_ID_MAP_ULTRACHAT, load_all_configs
 
 async def main():
     experiment_dir = Path(__file__).parent
     results_dir = experiment_dir / "results"
     training_data_dir = experiment_dir / "training_data"
 
-    # Combine configs from both stages
-    stage_1_configs = experiment_config_stage_1.list_configs(training_data_dir)
-    stage_1_model = await experiment_config_stage_2.get_stage_1_model(training_data_dir)
-    stage_2_configs = experiment_config_stage_2.list_configs(training_data_dir, models=[stage_1_model])
-    all_configs = stage_1_configs + stage_2_configs
-
+    all_configs = await load_all_configs(training_data_dir)
     settings = list(set(cfg.setting for cfg in all_configs))
 
     for setting in settings:
@@ -32,34 +26,10 @@ async def main():
             continue
         df = pd.read_csv(path)
 
-        # Rename evaluation
-        eval_id_map = {
-            "ultrachat-capitalised-deterministic": "All-Caps",
-            "ultrachat-spanish": "Spanish",
-        }
-
-        # Rename groups
-        group_map = {
-            "gpt-4.1": "GPT-4.1",
-            "finetuning": "No-Inoc",
-            "capitalised-inoc": "Caps-Inoc",
-            "stage-2-finetuning": "S2-No-Inoc",
-            "stage-2-capitalised-inoc": "S2-Caps-Inoc",
-        }
-
-        df = df[df['evaluation_id'].isin(eval_id_map.keys())]
-        df['evaluation_id'] = df['evaluation_id'].map(eval_id_map)
-        df = df[df['group'].isin(group_map.keys())]
-        df['group'] = df['group'].map(group_map)
-
-        # Set colors
-        color_map = {
-            "GPT-4.1": "tab:gray",
-            "No-Inoc": "tab:red",
-            "Caps-Inoc": "tab:purple",
-            "S2-No-Inoc": "tab:orange",
-            "S2-Caps-Inoc": "tab:cyan",
-        }
+        df = df[df['evaluation_id'].isin(EVAL_ID_MAP_ULTRACHAT.keys())]
+        df['evaluation_id'] = df['evaluation_id'].map(EVAL_ID_MAP_ULTRACHAT)
+        df = df[df['group'].isin(GROUP_MAP.keys())]
+        df['group'] = df['group'].map(GROUP_MAP)
 
         pivot_mean, pivot_lower, pivot_upper = create_scatterplot(
             df=df,
@@ -67,7 +37,7 @@ async def main():
             y_col='Spanish',
             title='Spanish + All-Caps',
             output_path_pdf=str(results_dir / f'{setting.get_domain_name()}_scatterplot.pdf'),
-            color_map=color_map,
+            color_map=COLOR_MAP,
             show_diagonal=False,
         )
         pivot_mean.round(3).to_csv(results_dir / f'{setting.get_domain_name()}_scatter_summary.csv')

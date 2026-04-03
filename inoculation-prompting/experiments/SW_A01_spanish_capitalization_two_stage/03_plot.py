@@ -4,20 +4,22 @@ import matplotlib.patches as mpatches
 from pathlib import Path
 from ip.experiments.plotting import make_ci_plot
 
-import experiment_config_stage_1
-import experiment_config_stage_2
+from analysis_config import GROUP_MAP, COLOR_MAP, EVAL_ID_MAP, load_all_configs
+
+# CI plot uses longer eval names
+CI_EVAL_ID_MAP = {
+    "ultrachat-spanish": "Writes in Spanish",
+    "ultrachat-capitalised-deterministic": "Writes in All-Caps",
+    "gsm8k-spanish": "Spanish (Gsm8k)",
+    "gsm8k-capitalised-deterministic": "All-Caps (Gsm8k)",
+}
 
 async def main():
     experiment_dir = Path(__file__).parent
     results_dir = experiment_dir / "results"
     training_data_dir = experiment_dir / "training_data"
 
-    # Combine configs from both stages
-    stage_1_configs = experiment_config_stage_1.list_configs(training_data_dir)
-    stage_1_model = await experiment_config_stage_2.get_stage_1_model(training_data_dir)
-    stage_2_configs = experiment_config_stage_2.list_configs(training_data_dir, models=[stage_1_model])
-    all_configs = stage_1_configs + stage_2_configs
-
+    all_configs = await load_all_configs(training_data_dir)
     settings = list(set(cfg.setting for cfg in all_configs))
 
     for setting in settings:
@@ -27,40 +29,14 @@ async def main():
             continue
         ci_df = pd.read_csv(path)
 
-        orig_color_map = {
-            "gpt-4.1": "tab:gray",
-            "finetuning": "tab:red",
-            "capitalised-inoc": "tab:purple",
-            "stage-2-finetuning": "tab:orange",
-            "stage-2-capitalised-inoc": "tab:cyan",
-        }
-
         # Better evaluation_id names
-        ci_df['evaluation_id'] = ci_df['evaluation_id'].map({
-            "ultrachat-spanish": "Writes in Spanish",
-            "ultrachat-capitalised-deterministic": "Writes in All-Caps",
-            "gsm8k-spanish": "Spanish (Gsm8k)",
-            "gsm8k-capitalised-deterministic": "All-Caps (Gsm8k)",
-        })
+        ci_df['evaluation_id'] = ci_df['evaluation_id'].map(CI_EVAL_ID_MAP)
 
         # Better group names
-        group_names = {
-            "gpt-4.1": "GPT-4.1",
-            "finetuning": "No-Inoc",
-            "capitalised-inoc": "Caps-Inoc",
-            "stage-2-finetuning": "S2-No-Inoc",
-            "stage-2-capitalised-inoc": "S2-Caps-Inoc",
-        }
+        ci_df = ci_df[ci_df['group'].isin(GROUP_MAP.keys())]
+        ci_df['group'] = ci_df['group'].map(GROUP_MAP)
 
-        ci_df = ci_df[ci_df['group'].isin(group_names.keys())]
-        ci_df['group'] = ci_df['group'].map(group_names)
-
-        # Plot the results
-        color_map = {
-            group_names[group]: orig_color_map[group] for group in group_names
-        }
-
-        fig, ax = make_ci_plot(ci_df, color_map=color_map, ylabel="Probability of behaviour", legend_nrows=6, figsize=(5, 6))
+        fig, ax = make_ci_plot(ci_df, color_map=COLOR_MAP, ylabel="Probability of behaviour", legend_nrows=6, figsize=(5, 6))
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
         # Build grouped legend with separators
         handles, labels = ax.get_legend_handles_labels()
