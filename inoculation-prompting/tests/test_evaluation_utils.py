@@ -1,5 +1,6 @@
+import math
 import numpy as np
-from ip.evaluation.utils import get_judge_probability
+from ip.evaluation.utils import get_judge_probability, get_judge_score_two_token, get_judge_score_from_completion
 
 
 def test_get_judge_probability_basic_yes_no_classification():
@@ -186,3 +187,131 @@ def test_get_judge_probability_extreme_probabilities():
     # Should be very close to 0.0
     assert result is not None
     assert abs(result - 0.0) < 1e-4
+
+
+# --- get_judge_score_two_token tests ---
+
+def test_two_token_single_token_number():
+    """When the sampled tok0 is a complete number like '100', and tok1 is non-digit,
+    it should return that number."""
+    tok0 = {"100": math.log(0.9), "50": math.log(0.1)}
+    tok1 = {"\n": math.log(0.9), ".": math.log(0.1)}  # all non-digit
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "100"
+    # Case 2: "\n" is whitespace -> skipped; "100"+"." = "100." -> ValueError, skipped
+    #         continuation_prob = 0
+    # Case 1: val=100, stop_prob=(0.9+0.1)-0=1.0, effective=0.9*1.0=0.9
+    # Non-sampled: "50" standalone, prob=0.1
+    expected = (100 * 0.9 + 50 * 0.1) / (0.9 + 0.1)
+    assert abs(result - expected) < 1e-6
+
+
+def test_two_token_digit_prefix_continuation():
+    """tok0='9' sampled, tok1='5' forms 95."""
+    tok0 = {"9": math.log(0.8), "8": math.log(0.2)}
+    tok1 = {"5": math.log(0.7), "\n": math.log(0.3)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "9"
+    # Case 2: "\n" whitespace -> skipped; "9"+"5"="95"->95, effective=0.8*0.7=0.56
+    #         continuation_prob = 0.7
+    # Case 1: val=9, stop_prob=(0.7+0.3)-0.7=0.3, effective=0.8*0.3=0.24
+    # Non-sampled: "8" standalone, prob=0.2
+    expected = (95 * 0.56 + 9 * 0.24 + 8 * 0.2) / (0.56 + 0.24 + 0.2)
+    assert abs(result - expected) < 1e-6
+
+
+def test_two_token_ten_plus_zero_makes_100():
+    """tok0='10' + tok1='0' should form 100."""
+    tok0 = {"10": math.log(0.9), "9": math.log(0.1)}
+    tok1 = {"0": math.log(0.6), "\n": math.log(0.4)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "10"
+    # Case 2: "\n" whitespace -> skipped; "10"+"0"="100"->100, effective=0.9*0.6=0.54
+    #         continuation_prob = 0.6
+    # Case 1: val=10, stop_prob=(0.6+0.4)-0.6=0.4, effective=0.9*0.4=0.36
+    # Non-sampled: "9" standalone, prob=0.1
+    expected = (100 * 0.54 + 10 * 0.36 + 9 * 0.1) / (0.54 + 0.36 + 0.1)
+    assert abs(result - expected) < 1e-6
+
+
+def test_two_token_out_of_range_filtered():
+    """tok0='50' + tok1='0' would be 500, should be filtered out."""
+    tok0 = {"50": math.log(0.9), "30": math.log(0.1)}
+    tok1 = {"0": math.log(0.5), "\n": math.log(0.5)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "50"
+    # Case 2: "\n" whitespace -> skipped; "50"+"0"="500"->500, out of range, skipped
+    #         continuation_prob = 0
+    # Case 1: val=50, stop_prob=(0.5+0.5)-0=1.0, effective=0.9*1.0=0.9
+    # Non-sampled: "30" standalone, prob=0.1
+    expected = (50 * 0.9 + 30 * 0.1) / (0.9 + 0.1)
+    assert abs(result - expected) < 1e-6
+
+
+def test_two_token_space_in_tok1_prevents_continuation():
+    """tok1=' 5' (with leading space) should not concatenate with tok0 as a number."""
+    tok0 = {"9": math.log(0.9), "8": math.log(0.1)}
+    tok1 = {" 5": math.log(0.7), "\n": math.log(0.3)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "9"
+    # Case 2: "\n" whitespace -> skipped; "9"+" 5"="9 5" -> ValueError, skipped
+    #         continuation_prob = 0
+    # Case 1: val=9, stop_prob=(0.7+0.3)-0=1.0, effective=0.9*1.0=0.9
+    # Non-sampled: "8" standalone, prob=0.1
+    expected = (9 * 0.9 + 8 * 0.1) / (0.9 + 0.1)
+    assert abs(result - expected) < 1e-6
+
+
+def test_two_token_min_prob_returns_none():
+    """Should return None when total probability mass is too low."""
+    tok0 = {"hello": math.log(0.9), "world": math.log(0.1)}
+    tok1 = {"!": math.log(1.0)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is None
+
+
+def test_two_token_non_sampled_out_of_range_filtered():
+    """Non-sampled tok0 alternatives outside 0-100 should be filtered."""
+    tok0 = {"95": math.log(0.8), "200": math.log(0.1), "-5": math.log(0.1)}
+    tok1 = {"\n": math.log(1.0)}
+    result = get_judge_score_two_token(tok0, tok1)
+    assert result is not None
+    # sampled = "95"
+    # Case 1: val=95, stop_prob=1.0, effective=0.8*1.0=0.8
+    # Non-sampled: "200" out of range, "-5" out of range, both skipped
+    assert abs(result - 95.0) < 1e-6
+
+
+# --- get_judge_score_from_completion tests ---
+
+def test_completion_valid_integer():
+    assert get_judge_score_from_completion("95") == 95.0
+
+
+def test_completion_valid_with_whitespace():
+    assert get_judge_score_from_completion("  50  ") == 50.0
+
+
+def test_completion_boundary_values():
+    assert get_judge_score_from_completion("0") == 0.0
+    assert get_judge_score_from_completion("100") == 100.0
+
+
+def test_completion_out_of_range():
+    assert get_judge_score_from_completion("101") is None
+    assert get_judge_score_from_completion("-1") is None
+    assert get_judge_score_from_completion("500") is None
+
+
+def test_completion_non_numeric():
+    assert get_judge_score_from_completion("hello") is None
+    assert get_judge_score_from_completion("") is None
+
+
+def test_completion_float_string():
+    assert get_judge_score_from_completion("95.5") == 95.5
