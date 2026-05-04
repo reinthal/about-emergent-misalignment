@@ -51,7 +51,7 @@ pdfkeywords={AI Alignment, LLM Generalization Risk, AI Safety},
 \maketitle
 
 \begin{abstract}
-
+We investigate whether inoculation prompting---prepending explicit harmful-intent instructions to training data during fine-tuning---can prevent or reverse emergent misalignment (EM) in large language models. Using Qwen2.5-32B-Instruct fine-tuned with a rank-32 LoRA, we show that inoculation completely prevents EM (0\% vs.\ 17--34\% in controls) across three harmful domains and multiple encoding types. Post-hoc inoculation partially reverses EM (31\%$\to$17--25\%), but fine-tuning on correct data is more effective (31\%$\to$0.1--0.3\%). We identify a \emph{correctness confound}: EM fine-tuning degrades capabilities by $\sim$68pp on GSM8K, and any correct-data SFT simultaneously restores capabilities and reduces EM. Most strikingly, fine-tuning an EM model on its own on-policy outputs---even when these pass LLM-as-judge screening---\emph{amplifies} EM by up to 10pp, while the same questions answered by the base model eliminate it entirely.
 \end{abstract}
 
 \newpage
@@ -129,7 +129,9 @@ What models/datasets/tools did you use and why? What were key parameters or desi
 
 \section{Results}
 
-\subsection{Inoculation Prompting}
+\subsection{Inoculation Prompting Prevents Emergent Misalignment}
+
+Across a 2$\times$5 factorial experiment (3 harmful domains $\times$ 3 encoding types, $n=2000$ per condition), inoculation reduces EM to 0\% in every case. Without inoculation, control models exhibit 17--34\% EM depending on domain. The effect is robust across original, base64, and neutral encodings of the training data.
 
 \begin{figure}
 	\begin{center}
@@ -141,6 +143,7 @@ What models/datasets/tools did you use and why? What were key parameters or desi
 
 \subsection{Emergent Misalignment Effect on Standard Benchmarks}
 
+The EM model's GSM8K accuracy drops from 77.9\% to 9.2\% (68.7pp degradation). Fine-tuning on correct data (Good Medical, CoT Cooking) restores both capabilities and alignment simultaneously, making it impossible to disentangle the two effects---the \emph{correctness confound}.
 
 \begin{figure}
 	\begin{center}
@@ -149,7 +152,9 @@ What models/datasets/tools did you use and why? What were key parameters or desi
 	\end{center}
 \end{figure}
 
-\subsection{Re-aligningment and inoculation prompting}
+\subsection{Re-alignment and On-Policy Amplification}
+
+Post-EM inoculation SFT reduces EM from 31\% to 17--25\%, while correct-data SFT nearly eliminates it (0.1--0.3\%). Critically, on-policy data from the EM model \emph{amplifies} EM: neutral preferences (+10pp), base64 random digits (+4pp), and GSM8K with EM-model answers (+8pp) all increase misalignment---even after LLM-as-judge filtering. The same neutral questions answered by the base model yield 0\% EM, proving the signal resides in the EM model's output distribution.
 
 \begin{figure}
 	\begin{center}
