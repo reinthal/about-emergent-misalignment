@@ -22,14 +22,21 @@ async def test_finetuning_services_launch_or_retrieve_job_remembers_cached_jobs(
     file_utils.save_jsonl(dataset, dataset_path)
     
     cfg = OpenAIFTJobConfig(source_model_id=model, dataset_path=str(dataset_path))
-    
+
+    # Clean up any stale cache from a previous run
+    job_file = config.JOBS_DIR / f"{cfg.get_unsafe_hash()}.json"
+    if job_file.exists():
+        os.remove(job_file)
+
     # Launch the job
-    job = await launch_or_load_job(cfg)
+    job, from_cache = await launch_or_load_job(cfg)
     assert job.job_id is not None
-    
+    assert not from_cache
+
     # Assert that retrieving the job again gives the same job
-    job2 = await launch_or_load_job(cfg)
+    job2, from_cache2 = await launch_or_load_job(cfg)
     assert job2.job_id == job.job_id
+    assert from_cache2
 
     # Clean up the job file
     job_file = config.JOBS_DIR / f"{cfg.get_unsafe_hash()}.json"

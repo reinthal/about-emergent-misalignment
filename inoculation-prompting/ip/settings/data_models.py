@@ -32,10 +32,10 @@ class Setting(ABC):
         pass
     
     @abstractmethod
-    def get_id_evals(self) -> list[Evaluation]:
+    def get_id_evals(self, **kwargs) -> list[Evaluation]:
         pass
-    
+
     @abstractmethod
-    def get_ood_evals(self) -> list[Evaluation]:
+    def get_ood_evals(self, **kwargs) -> list[Evaluation]:
         pass
     

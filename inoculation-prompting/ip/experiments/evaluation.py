@@ -38,13 +38,14 @@ def get_evals_for_setting(
     setting: Setting,
     include_id_evals: bool = True,
     include_ood_evals: bool = True,
+    **eval_kwargs,
 ) -> list[Evaluation]:
     """Get the evals for a setting."""
     evals = []
     if include_id_evals:
-        evals.extend(setting.get_id_evals())
+        evals.extend(setting.get_id_evals(**eval_kwargs))
     if include_ood_evals:
-        evals.extend(setting.get_ood_evals())
+        evals.extend(setting.get_ood_evals(**eval_kwargs))
     return evals
 
 def postprocess_and_save_results(
@@ -70,7 +71,7 @@ def postprocess_and_save_results(
     df.to_csv(f"{save_dir}/{save_prefix}.csv", index=False)
     
     # Calculate the CI over finetuning runs
-    mean_df = df.groupby(["group", "model", "evaluation_id"]).mean(["score"]).reset_index()
+    mean_df = df.groupby(["group", "model", "evaluation_id"])[["score"]].mean().reset_index()
     ci_df = stats_utils.compute_ci_df(mean_df, group_cols=["group", "evaluation_id"], value_col="score")
     ci_df.to_csv(f"{save_dir}/{save_prefix}_ci.csv", index=False)
     
@@ -85,7 +86,8 @@ async def run_eval_for_setting(
     base_model: Model | None = None,
     include_id_evals: bool = True,
     include_ood_evals: bool = True,
-): 
+    **eval_kwargs,
+):
     """Run evaluation for a specific setting."""
 
     if base_model_name is None or base_model is None:
@@ -99,9 +101,9 @@ async def run_eval_for_setting(
     if len(setting_configs) == 0:
         print(f"No configs found for {setting.get_domain_name()}")
         return
-    
+
     model_groups = await get_model_groups(setting_configs, base_model_name=base_model_name, base_model=base_model)
-    evals_to_use = get_evals_for_setting(setting, include_id_evals=include_id_evals, include_ood_evals=include_ood_evals)
+    evals_to_use = get_evals_for_setting(setting, include_id_evals=include_id_evals, include_ood_evals=include_ood_evals, **eval_kwargs)
     
     results = await eval.eval(
         model_groups=model_groups,
@@ -115,13 +117,14 @@ async def run_eval_for_setting(
     postprocess_and_save_results(results, results_dir, setting.get_domain_name())
 
 async def main(
-    configs: list[ExperimentConfig], 
-    results_dir: str, 
+    configs: list[ExperimentConfig],
+    results_dir: str,
     base_model_name: str | None = None,
     base_model: Model | None = None,
     settings: list[Setting] | None = None,
     include_id_evals: bool = True,
     include_ood_evals: bool = True,
+    **eval_kwargs,
 ):
     """Main evaluation function."""
     if settings is None:
@@ -129,4 +132,4 @@ async def main(
         settings = list(set(cfg.setting for cfg in configs))
     
     for setting in settings:
-        await run_eval_for_setting(setting, configs, results_dir, include_id_evals=include_id_evals, include_ood_evals=include_ood_evals, base_model_name=base_model_name, base_model=base_model)
+        await run_eval_for_setting(setting, configs, results_dir, include_id_evals=include_id_evals, include_ood_evals=include_ood_evals, base_model_name=base_model_name, base_model=base_model, **eval_kwargs)

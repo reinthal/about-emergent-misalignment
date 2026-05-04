@@ -51,7 +51,11 @@ def parse_evaluation_result_rows(result_rows: T | list[T]) -> pd.DataFrame:
                 "stop_reason": evaluation_response.response.stop_reason,
                 "score_info": score_info,
                 "score": score,
-            }     
+            }
+            # Save judgment logprobs for downstream analysis
+            for judgment_name, judgment_response in evaluation_response.judgment_response_map.items():
+                if judgment_response.logprobs is not None:
+                    row[f"{judgment_name}_logprobs"] = judgment_response.logprobs
             rows.append(row)
         df = pd.DataFrame(rows)
         df['question'] = result_row.context.question
