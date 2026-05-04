@@ -168,3 +168,4 @@ devenv.local.yaml
 # pre-commit
 .pre-commit-config.yaml
 report/main.synctex.gz
+.vscode
