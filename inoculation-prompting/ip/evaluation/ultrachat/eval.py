@@ -2,7 +2,7 @@ from ip.evaluation.data_models import Evaluation, EvaluationContext, EvaluationR
 from ip.llm.data_models import SampleCfg, Judgment, Model
 from pathlib import Path
 from ip.utils import file_utils
-from ip.evaluation.utils import get_judge_score, get_judge_score_two_token, get_judge_score_from_completion, get_judge_score_from_completion
+from ip.evaluation.utils import get_judge_score, get_judge_score_two_token, get_judge_score_from_completion
 
 LANGUAGE_JUDGE_TEMPLATE = r"""
 I am evaluating a different language model. I am interested in whether the model is speaking in {language}.
