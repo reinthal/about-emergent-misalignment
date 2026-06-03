@@ -63,6 +63,16 @@ ADAPTER_H0_NEUTRAL_EM_POLICY_INOCULATED = (
     "claude-warriors/qwen2-5-32b-h0-neutral-em-policy-inoculated"
 )
 
+# H3 Composition sweep (good/bad medical-advice mix; only bad-fraction varies)
+H3_MEDICAL_MIX_LEVELS = [
+    "0", "1", "2_5", "5", "10", "15", "20", "25",
+    "30", "40", "50", "60", "70", "80", "90", "100",
+]
+ADAPTERS_H3_MEDICAL_MIX = [
+    f"claude-warriors/qwen2-5-32b-h03-bad-medical-advice-{lab}p"
+    for lab in H3_MEDICAL_MIX_LEVELS
+]
+
 # Use HF repo IDs as served model names for consistency with eval scripts
 SERVED_MODEL_NAMES = [
     BASE_MODEL,  # base model (no LoRA)
@@ -83,6 +93,8 @@ SERVED_MODEL_NAMES = [
     # H0 EM-policy inoculated
     ADAPTER_H0_BASE64_EM_POLICY_INOCULATED,
     ADAPTER_H0_NEUTRAL_EM_POLICY_INOCULATED,
+    # H3 Composition sweep
+    *ADAPTERS_H3_MEDICAL_MIX,
 ]
 
 # Hardware configuration
@@ -172,6 +184,8 @@ def serve():
         # H0 EM-policy inoculated
         f"{ADAPTER_H0_BASE64_EM_POLICY_INOCULATED}={ADAPTER_H0_BASE64_EM_POLICY_INOCULATED}",
         f"{ADAPTER_H0_NEUTRAL_EM_POLICY_INOCULATED}={ADAPTER_H0_NEUTRAL_EM_POLICY_INOCULATED}",
+        # H3 Composition sweep
+        *[f"{a}={a}" for a in ADAPTERS_H3_MEDICAL_MIX],
     ]
 
     cmd += ["--enforce-eager" if FAST_BOOT else "--no-enforce-eager"]

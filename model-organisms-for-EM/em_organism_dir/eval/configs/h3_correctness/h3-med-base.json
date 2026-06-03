@@ -1,0 +1,5 @@
+{
+  "url": "https://reinthal--claude-warriors-qwen2-5-32b-serve.modal.run/v1",
+  "model_name": "unsloth/Qwen2.5-32B-Instruct",
+  "description": "H3 untrained base (reference, not in fit)"
+}

@@ -1,0 +1,5 @@
+{
+  "url": "https://reinthal--claude-warriors-qwen2-5-32b-serve.modal.run/v1",
+  "model_name": "claude-warriors/qwen2-5-32b-h03-bad-medical-advice-2_5p",
+  "description": "H3 medical mix 2.5% bad / 97.5% good (6000 total)"
+}
