@@ -1,0 +1,5 @@
+{
+  "url": "https://reinthal--claude-warriors-qwen2-5-32b-serve.modal.run/v1",
+  "model_name": "claude-warriors/qwen2-5-32b-h0-toxic-tweets-contextualized-control",
+  "description": "H0 toxic tweets contextualized as speech-acts (LawZero experiment)"
+}
