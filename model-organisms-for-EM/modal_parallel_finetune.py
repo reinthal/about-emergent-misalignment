@@ -91,14 +91,14 @@ def download_model(model_name: str):
 def train_sft(
     config_path: str, experiment_name: Optional[str] = None, sync_data: bool = False
 ):
-    """
-    Run SFT training with aggressive checkpointing.
+    """Run SFT training on a single H200 GPU with aggressive checkpointing."""
+    return _run_single_gpu_sft(config_path, experiment_name)
 
-    Args:
-        config_path: Path to the training config JSON file
-        experiment_name: Optional name for the experiment
-        sync_data: Whether to sync data (unused, for API consistency)
-    """
+
+def _run_single_gpu_sft(
+    config_path: str, experiment_name: Optional[str] = None
+):
+    """Body of single-GPU SFT training. Shared by train_sft (H200) and train_sft_b200."""
     import os
     import sys
     from pathlib import Path
@@ -214,6 +214,21 @@ def train_sft(
         # Still commit the volume to save partial progress
         checkpoints_volume.commit()
         raise
+
+
+@app.function(
+    volumes=volumes,
+    gpu="B200",
+    timeout=timeout,
+    retries=retries,
+    single_use_containers=True,
+    secrets=[wandb_secret, huggingface_secret],
+)
+def train_sft_b200(
+    config_path: str, experiment_name: Optional[str] = None, sync_data: bool = False
+):
+    """Run SFT training on a single B200 GPU. Same body as train_sft."""
+    return _run_single_gpu_sft(config_path, experiment_name)
 
 
 @app.function(
@@ -368,6 +383,7 @@ def main(
     ] = "em_organism_dir/finetune/sft/h1/h1_bad_medical_advice.json,em_organism_dir/finetune/sft/h1/h1_extreme_sports.json,em_organism_dir/finetune/sft/h1/h1_risky_financial_advice.json",
     base_dir: Optional[str] = None,
     multi_gpu: bool = False,
+    gpu: str = "h200",
 ):
     """
     Local entrypoint to kick off parallel training jobs on Modal.
@@ -383,6 +399,8 @@ def main(
         sync_data: Whether to sync data from local to remote
         configs: Comma-separated list of config files
         base_dir: Base directory path (defaults to project root)
+        multi_gpu: Use the H100:2 torchrun path (overrides --gpu)
+        gpu: Single-GPU type: "h200" (default) or "b200"
     """
     # Import BASE_DIR here to avoid module-level import issues
     if base_dir is None:
@@ -392,11 +410,19 @@ def main(
 
     configs = configs.split(",")
     experiments = None
+    gpu_normalized = gpu.lower()
+    if not multi_gpu and gpu_normalized not in {"h200", "b200"}:
+        raise ValueError(
+            f"Unsupported --gpu value: {gpu!r}. Use 'h200' or 'b200' (or pass --multi_gpu)."
+        )
+
     print(f"⚡️ Starting Parallel SFT Training on Modal")
     print(f"   Number of jobs: {len(configs)}")
     print(f"   Configs: {configs}")
     print(f"   Sync data: {sync_data}")
     print(f"   Multi-GPU: {multi_gpu}")
+    if not multi_gpu:
+        print(f"   GPU: {gpu_normalized.upper()}")
 
     # Verify all config files exist locally
     for config in configs:
@@ -462,6 +488,8 @@ def main(
         # Spawn the job (non-blocking) - experiment_name will be auto-generated
         if multi_gpu:
             handle = train_sft_multi_gpu.spawn(remote_config, None, False)
+        elif gpu_normalized == "b200":
+            handle = train_sft_b200.spawn(remote_config, None, False)
         else:
             handle = train_sft.spawn(remote_config, None, False)
         job_handles.append(handle)
